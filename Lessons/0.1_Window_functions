@@ -1,0 +1,158 @@
+-- Count rows, aggregation only
+SELECT count(*)
+FROM 
+job_postings_fact;
+
+-- Window functions
+SELECT
+    job_id,
+    count(*) OVER ()
+FROM
+job_postings_fact;
+
+
+-- Window function with partition by
+SELECT 
+    job_id,
+    job_title_short,
+    company_id,
+    salary_hour_avg::INTEGER,
+    AVG(salary_hour_avg) OVER (
+        PARTITION BY job_title_short,company_id
+    )::INTEGER AS avg_salary_by_title
+FROM 
+    job_postings_fact
+WHERE
+    salary_hour_avg NOT NULL
+ORDER BY 2;
+
+
+
+-- Window function with order by
+SELECT 
+    job_id,
+    job_title_short,
+    salary_hour_avg,
+    RANK() OVER (
+        ORDER BY salary_hour_avg DESC
+    ) AS avg_salary_ranked
+FROM 
+    job_postings_fact
+WHERE
+    salary_hour_avg IS NOT NULL
+ORDER BY 
+    salary_hour_avg DESC
+LIMIT 10;
+
+
+--Window function with partition by AND order by
+SELECT 
+    job_posted_date,
+    job_title_short,
+    salary_hour_avg,
+    AVG(salary_hour_avg) OVER (
+        PARTITION BY job_title_short
+        ORDER BY job_posted_date 
+    ) AS running_avg_hourly_by_title
+FROM 
+    job_postings_fact
+WHERE
+    salary_hour_avg NOT NULL
+ORDER BY 
+    job_title_short,
+    job_posted_date
+LIMIT 10;
+    
+
+SELECT 
+    job_id,
+    job_title_short,
+    salary_hour_avg,
+    RANK() OVER (
+        ORDER BY salary_hour_avg DESC
+    ) AS avg_salary_ranked
+FROM 
+    job_postings_fact
+WHERE
+    salary_hour_avg IS NOT NULL
+ORDER BY 
+    salary_hour_avg DESC,
+    job_title_short
+LIMIT 10;
+
+
+
+
+--AGGREGATE FUNCTIONS WITH WINDOW FUNCTION
+SELECT 
+    job_posted_date,
+    job_title_short,
+    salary_hour_avg,
+    MAX(salary_hour_avg) OVER (
+        PARTITION BY job_title_short
+        ORDER BY job_posted_date 
+    ) AS running_avg_hourly_by_title
+FROM 
+    job_postings_fact
+WHERE
+    salary_hour_avg NOT NULL
+ORDER BY 
+    job_title_short,
+    job_posted_date
+LIMIT 10;
+
+
+-- ROW AND RANK
+SELECT 
+    job_id,
+    job_title_short,
+    salary_hour_avg,
+    DENSE_RANK() OVER (
+        ORDER BY salary_hour_avg DESC
+    ) AS avg_salary_ranked
+FROM 
+    job_postings_fact
+WHERE
+    salary_hour_avg IS NOT NULL
+ORDER BY 
+    salary_hour_avg DESC
+LIMIT 10;
+
+
+-- ROW_NUMBER() - Providing a new job_id
+SELECT
+    *,
+    ROW_NUMBER() OVER (
+        ORDER BY job_posted_date   
+    ) AS row_n
+FROM
+    job_postings_fact
+ORDER BY
+    job_posted_date
+LIMIT 10;    
+
+
+-- Navigation functions LAG and LEAD
+SELECT 
+    job_id,
+    company_id,
+    job_title,
+    job_title_short,
+    job_posted_date,
+    salary_hour_avg,
+    LAG(salary_year_avg) OVER (
+        PARTITION BY company_id
+        ORDER BY job_posted_date
+    ),
+    salary_year_avg - LAG(salary_year_avg) OVER (
+        PARTITION BY company_id
+        ORDER BY job_posted_date
+    ) AS salary_change
+FROM
+    job_postings_fact
+WHERE 
+    salary_year_avg IS NOT NULL      
+ORDER BY
+    company_id,
+    job_posted_date      
+LIMIT 50;

@@ -1,0 +1,110 @@
+-- ARRAY OR LIST intro
+SELECT ['python', 'sql', 'vscode'] as skills_array;
+
+
+-- ARRAY functions on duckdb
+WITH skills as(
+    SELECT 'skill' AS skill
+    UNION ALL
+    SELECT 'python'
+    UNION ALL
+    SELECT 'sql'
+),skills_array AS(
+
+    SELECT ARRAY_AGG(skill ORDER BY skill) AS skills
+    FROM skills
+)
+SELECT 
+    skills[1] AS first_skill,
+    skills[2] AS second_skill  
+FROM 
+    skills_array;
+
+
+-- STRUCT INTRO
+SELECT {skill:'python',type:'programming'} AS skill_struct;
+
+
+--1
+WITH skills_struct AS (
+
+    SELECT
+    STRUCT_PACK(
+        skill := 'python',
+        type := 'programming'
+
+    ) as s
+)
+SELECT 
+    s.skill,
+    s.type  
+FROM
+    skills_struct;
+
+--2
+
+WITH skills as(
+    SELECT 'skill' AS skill, 'type' AS 'types'
+    UNION ALL
+    SELECT 'python','programming'
+    UNION ALL
+    SELECT 'sql','db'
+)
+SELECT 
+    STRUCT_PACK(
+        skill := skill,
+        type := types
+    )
+FROM
+    skills;    
+
+
+
+-- ARRAY OF STRUCTS 
+SELECT  [
+    {'skill' : 'python','type': 'programming'},
+    {'skill' : 'sql','type': 'programming'}
+] AS array_structs;   
+
+--2
+
+WITH skills as(
+    SELECT 'skill' AS skill, 'type' AS 'types'
+    UNION ALL
+    SELECT 'python','programming'
+    UNION ALL
+    SELECT 'sql','db'
+), skills_array_struct AS ( 
+    SELECT 
+        ARRAY_AGG(
+            STRUCT_PACK(
+                skill := skill,
+                type := types
+            )
+        ) AS array_struct
+    FROM
+        skills
+)
+SELECT 
+    array_struct[1].skill,
+    array_struct[1].type
+FROM
+    skills_array_struct;
+
+
+--final example of array
+CREATE OR REPLACE TEMP TABLE job_skills_array AS
+SELECT
+    jpf.job_id,
+    jpf.job_title_short,
+    jpf.salary_year_avg,
+    LIST(sd.skills) as array_of_skills
+FROM
+    job_postings_fact AS jpf
+LEFT JOIN skills_job_dim AS sjd
+    ON jpf.job_id = sjd.job_id
+LEFT JOIN skills_dim AS sd
+    ON sd.skill_id = sjd.skill_id
+GROUP BY ALL;        
+
+
